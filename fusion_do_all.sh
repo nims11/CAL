@@ -10,13 +10,20 @@
 
 
 PURPOSE=baseline
-JUDGECLASS="aquaint"
+JUDGECLASS="trec6"
 
 #CORPLIST=("robust04_0" "robust04_1" "robust04_2" "robust04_3" "robust04_4" "robust04_5")
 #CORPLIST=("FBIS" "FT" "FR" "LA")
-CORPLIST=("aquaint")
+CORPLIST=("trec6")
 SOFIA="/home/nghelani/cal-fusion/sofia-ml/sofia-ml"
-MAX_THREADS=10
+NUMSYS=2
+export LC_ALL=C
+KISSSDB=$(dirname $(readlink -f $0))/kisssdb/kisssdb
+
+if [ ! -e "$KISSSDB" ]; then
+    echo "kisssdb binary not found! 'make' at the root of this project"
+    exit 1
+fi
 
 for CORP in "${CORPLIST[@]}"
 do
@@ -35,14 +42,16 @@ do
 
     cp "$CORP".svm.fil ../"$CORP".svm.fil
 
-    KEYSIZE=$(awk 'BEGIN{a=0}{len = length($1); a=a<len?len:a}END{print a}' "$CORP".svm.fil)
-    VALSIZE=$(awk 'BEGIN{a=0}{len = length($0); a=a<len?len:a}END{print a}' "$CORP".svm.fil)
-    KEYSIZE=$((KEYSIZE+2))
-    VALSIZE=$((VALSIZE+2))
-    # echo "Indexing $CORP.svm.fil, keysize = $KEYSIZE, valsize = $VALSIZE"
-    # ./indexer "$CORP".svm.fil "$CORP".db $KEYSIZE $VALSIZE || (echo "Error creating db"; exit 1)
-
     popd
+    echo "Indexing $CORP.svm.fil"
+    awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
+
+    if [ $? -eq 0 ]; then
+        echo "DB Population complete..."
+    else
+        echo "Error Creating DB"
+        exit 1
+    fi
 
     while IFS='' read -r line || [[ -n $line ]]; do
         IFS=':' read -ra TEXT <<< "$line"
@@ -62,7 +71,7 @@ do
 
         echo `wc -l < "$CORP".svm.fil` > N
         pushd $TOPIC 
-        for SYS in {1..2}; do
+        for SYS in $(seq $NUMSYS); do
             mkdir $SYS
         done
 
@@ -76,7 +85,7 @@ do
 
 
 
-        for SYS in {1..2}; do
+        for SYS in $(seq $NUMSYS); do
             pushd $SYS
             touch rel.$TOPIC.fil
 
@@ -111,28 +120,28 @@ do
         sed -e 's/[^ ]*/1/' svm.$TOPIC.seed.doc.fil > $TOPIC.synthetic.seed
 
 
-        for x in {0..9} ; do
+        for x in {0..5} ; do
             for y in {0..9} ; do
                 if [ $NDUN -lt $NDOCS ] ; then
                     export N=$x$y
                     echo "GENERATE TRAINING SET"
-                    for SYS in {1..2}; do
+                    for SYS in $(seq $NUMSYS); do
                         pushd $SYS
                         cp ../$TOPIC.synthetic.seed trainset
                         cut -f2 ../docfils | shuf -n$R | sort |\
-                            ../../indexer ../../$CORP.db $KEYSIZE $VALSIZE | sed -e's/[^ ]*/-1/' > trainset1 &
+                            "$KISSSDB" ../../$CORP.db | sed -e's/[^ ]*/-1/' > trainset1 &
                         (
                         cat ../new[0-9][0-9].$TOPIC | sort > seed
                         cat seed | join - rel.$TOPIC.fil | sed -e 's/^/1 /' > x
                         cat seed | join -v1 - rel.$TOPIC.fil | sort -R | head -50000 | sed -e 's/^/-1 /' >> x
-                        cut -d' ' -f2 x | ../../indexer ../../$CORP.db $KEYSIZE $VALSIZE | cut -d' ' -f2- | paste -d' ' <(cut -d' ' -f1 x) - | sort -n > trainset2
+                        cut -d' ' -f2 x | "$KISSSDB" ../../$CORP.db | cut -d' ' -f2- | paste -d' ' <(cut -d' ' -f1 x) - | sort -n > trainset2
                         ) &
                         popd
                     done
                     wait
 
                     echo "TRAIN!"
-                    for SYS in {1..2}; do
+                    for SYS in $(seq $NUMSYS); do
                         pushd $SYS
                         (
                         cat trainset1 trainset2 >> trainset
@@ -153,9 +162,6 @@ do
                         echo "TEST!"
                         if [ "$RES" -eq "0" ] ; then
                             for z in ../svm.test.* ; do
-                                while [ "$(jobs | grep 'Running' | wc -l)" -ge "$MAXTHREADS" ]; do
-                                    sleep 1
-                                done
                                 $SOFIA --test_file $z --dimensionality 3300000\
                                     --model_in svm_model --results_file pout."$(basename $z)" &
                             done
@@ -174,7 +180,7 @@ do
                         awk \
                             'NR==FNR{a[$1]=$2}\
                             NR!=FNR{if($1 in a)\
-                            printf("%s judge=%s class=Ham score=%s\n", $1, $2>0?"spam":"ham", $2);}'\
+                            printf("%s judge=%s class=Ham score=%s\n", $1, "spam", $2);}'\
                             "$TOPIC".record.list inlr.out > fusion_training
                         if [[ $(wc -l < "$TOPIC".record.list) > 0 ]]; then
                             awk \
@@ -186,7 +192,7 @@ do
                             awk \
                                 '{\
                                 printf("%s judge=%s class=Ham score=%s\n", $1, "Ham", $2);}'\
-                                inlr.out >> fusion_training
+                                 inlr.out >> fusion_training
                         fi
                         wait
                         ) &
@@ -195,7 +201,7 @@ do
                     wait
 
                     # python3 ../fusion.py 1/new$N.$TOPIC 2/new$N.$TOPIC > new$N.$TOPIC
-                    ../logmangle 1/fusion_training 2/fusion_training | tr '=' ' ' | cut -d' ' -f1,7 | sort > fused_ranklist
+                    ../logmangle [1-9]/fusion_training | tr '=' ' ' | cut -d' ' -f1,7 | sort -k1 > fused_ranklist
                     sort 1/seed | join -v2 - fused_ranklist | sort -rn -k2 > x
                     mv x fused_ranklist
 
@@ -206,7 +212,7 @@ do
                     fi
 
                     echo "ASSESS!"
-                    for SYS in {1..2}; do
+                    for SYS in $(seq $NUMSYS); do
                         pushd $SYS
                         cp ../new$N.$TOPIC ./
                         rm -rf rel.$TOPIC.Judged.doc.list
