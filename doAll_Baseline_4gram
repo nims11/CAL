@@ -83,7 +83,7 @@ for CORP in "${CORPLIST[@]}"
          cp $TOPIC.seed.doc ../$TOPIC.seed.doc
          popd
 
-         ./dofeaturesseed4 $TOPIC.seed.doc $TOPIC $CORP
+         MODE=4gram ./dofeaturesseed $TOPIC.seed.doc $TOPIC $CORP
          pushd $TOPIC
          sed -e 's/[^ ]*/0/' ../$CORP.svm.fil | ../dosplit
          sed -e 's/[^ ]*/1/' svm.$TOPIC.seed.doc.fil > $TOPIC.synthetic.seed
