@@ -17,13 +17,16 @@ JUDGECLASS="oldreut"
 CORPLIST=("oldreut")
 SOFIA="/home/h435zhan/Develop/sofia-ml-read-only/src/sofia-ml"
 MAXTHREADS=4
+export LC_ALL=C
+KISSSDB=$(dirname $(readlink -f $0))/kisssdb/kisssdb
+
+if [ ! -e "$KISSSDB" ]; then
+    echo "kisssdb binary not found! 'make' at the root of this project"
+    exit 1
+fi
 
 for CORP in "${CORPLIST[@]}"
    do
-      # if ! [ -e Corpus/"$CORP".tgz ] ; then
-      # tar -cvzf Corpus/"$CORP".tgz Corpus/"$CORP"/
-      # fi 
-      
    
       pushd Corpus
       
@@ -37,12 +40,14 @@ for CORP in "${CORPLIST[@]}"
       
       popd
 
-      KEYSIZE=$(awk 'BEGIN{a=0}{len = length($1); a=a<len?len:a}END{print a}' "$CORP".svm.fil)
-      VALSIZE=$(awk 'BEGIN{a=0}{len = length($0); a=a<len?len:a}END{print a}' "$CORP".svm.fil)
-      KEYSIZE=$((KEYSIZE+2))
-      VALSIZE=$((VALSIZE+2))
       echo "Indexing $CORP.svm.fil, keysize = $KEYSIZE, valsize = $VALSIZE"
-      ./indexer "$CORP".svm.fil "$CORP".db $KEYSIZE $VALSIZE || (echo "Error creating db"; exit 1)
+      awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
+      if [ $? -eq 0 ]; then
+          echo "DB Population complete..."
+      else
+          echo "Error Creating DB"
+          exit 1
+      fi
 
       while IFS='' read -r line || [[ -n $line ]]; do
          IFS=':' read -ra TEXT <<< "$line"
@@ -65,13 +70,8 @@ for CORP in "${CORPLIST[@]}"
 
          echo "$QUERY" > "$TOPIC".seed.doc
 
-       
-
-
          cut -d' ' -f1 ../$CORP.svm.fil | sed -e 's/.*/& &/' > docfil
          cut -d' ' -f1 docfil | cat -n > docfils
-         
-
 
          touch rel.$TOPIC.fil
          
@@ -103,22 +103,24 @@ for CORP in "${CORPLIST[@]}"
          sed -e 's/[^ ]*/1/' svm.$TOPIC.seed.doc.fil > $TOPIC.synthetic.seed
 
 
-         for x in {0..9} ; do
-            for y in {0..9} ; do
+        for N in $(seq 0 99); do
             if [ $NDUN -lt $NDOCS ] ; then
                export N=$x$y
                cp $TOPIC.synthetic.seed trainset
                #cut -f2 docfils | join -v1 - rel.$TOPIC.fil > $TOPIC.allNoRel.docfils
-               #cut -f1 $TOPIC.allNoRel.docfils | sort -R | head -$R | sort | join - ../svm.fil | sed -e's/[^ ]*/-1/' >> trainset
-               cut -f2 docfils | shuf -n $R | sort | ../indexer ../"$CORP".db $KEYSIZE $VALSIZE | sed -e's/[^ ]*/-1/' >> trainset1 &
+               #cut -f1 $TOPIC.allNoRel.docfils | sort -R | head -$R | sort | join - ../svm.fil\
+               #    | sed -e's/[^ ]*/-1/' >> trainset
+               cut -f2 ../docfils | shuf -n$R | sort |\
+                   "$KISSSDB" ../../$CORP.db | sed -e's/[^ ]*/-1/' > trainset1 &
 
                (
                cat new[0-9][0-9].$TOPIC > seed
                #cut -f2 docfil | join - $TOPIC.clusteringJudged.doc.sorted | cut -d' ' -f2 >> seed
                cat seed | sort | join - rel.$TOPIC.fil | sed -e 's/^/1 /' > x
-               #cat seed | sort | join -v1 - rel.$TOPIC.fil | join -v1 - $TOPIC.clusteringNotRel.doc.sorted | sort -R | head -50000 | sed -e 's/^/-1 /' >> x
+               #cat seed | sort | join -v1 - rel.$TOPIC.fil | join -v1 - $TOPIC.clusteringNotRel.doc.sorted |\
+               #    sort -R | head -50000 | sed -e 's/^/-1 /' >> x
                cat seed | sort | join -v1 - rel.$TOPIC.fil | shuf -n 50000 | sed -e 's/^/-1 /' >> x
-               cut -d' ' -f2 x | ../indexer ../$CORP.db $KEYSIZE $VALSIZE | cut -d' ' -f2- |\
+               cut -d' ' -f2 x | "$KISSSDB" ../../$CORP.db | cut -d' ' -f2- |\
                    paste -d' ' <(cut -d' ' -f1 x) - | sort -n > trainset2
                ) &
                wait
@@ -134,7 +136,7 @@ for CORP in "${CORPLIST[@]}"
                echo $RELTRAINDOC $NOTRELTRAINDOC $PREVALENCERATE >> prevalence.rate
                
 
-               $SOFIA --learner_type logreg-pegasos --loop_type roc --lambda $LAMBDA\
+               "$SOFIA" --learner_type logreg-pegasos --loop_type roc --lambda $LAMBDA\
                    --iterations 200000 --training_file trainset --dimensionality 3300000 --model_out svm_model
                #/home/user/svmlight/svm_learn trainset
 
@@ -145,7 +147,7 @@ for CORP in "${CORPLIST[@]}"
                      while [ "$(jobs | grep 'Running' | wc -l)" -ge "$MAXTHREADS" ]; do
                          sleep 1
                      done
-                     $SOFIA --test_file $z --dimensionality 3300000 --model_in svm_model --results_file pout.$z &
+                     "$SOFIA" --test_file $z --dimensionality 3300000 --model_in svm_model --results_file pout.$z &
                      #/home/user/svmlight/svm_classify $z svm_model pout.$z
                   done
                   wait
@@ -160,9 +162,14 @@ for CORP in "${CORPLIST[@]}"
                   head -$L new$N.$TOPIC > y ; mv y new$N.$TOPIC
                fi
 
-               #sed -e 's/.*\///' -e 's/.*/"&"/' new$N.$TOPIC | tr '\n' ',' | sed -e 's/^/[/' -e 's/,$/]/' | curl -XPOST -H 'Content-Type:application/json' "$TRSERVER/judge/$LOGIN/$TOPIC" -d @- | tr '}' '\n' | grep 'judgement.:1' | cut -d'"' -f4 | sort | join -o2.2 - docfil >> rel.$TOPIC.fil
-               # python ../doJudgementMain.py --topic=$TOPIC --judgefile=../judgement/qrels.$JUDGECLASS.list --input=new$N.$TOPIC --output=rel.$TOPIC.Judged.doc.list --memorydumpfile=judge.effort.$TOPIC."$PURPOSE".dump
-               python ../doJudgementMain.py --topic=$TOPIC --judgefile=../judgement/qrels.$JUDGECLASS.list --input=new$N.$TOPIC --output=rel.$TOPIC.Judged.doc.list --record=$TOPIC.record.list
+               # sed -e 's/.*\///' -e 's/.*/"&"/' new$N.$TOPIC | tr '\n' ',' | sed -e 's/^/[/' -e 's/,$/]/'\
+               #    | curl -XPOST -H 'Content-Type:application/json' "$TRSERVER/judge/$LOGIN/$TOPIC" -d @- \
+               #    | tr '}' '\n' | grep 'judgement.:1' | cut -d'"' -f4 | sort | join -o2.2 - docfil >> rel.$TOPIC.fil
+               # python ../doJudgementMain.py --topic=$TOPIC --judgefile=../judgement/qrels.$JUDGECLASS.list\
+               #    --input=new$N.$TOPIC --output=rel.$TOPIC.Judged.doc.list\
+               #    --memorydumpfile=judge.effort.$TOPIC."$PURPOSE".dump
+               python ../doJudgementMain.py --topic=$TOPIC --judgefile=../judgement/qrels.$JUDGECLASS.list\
+                   --input=new$N.$TOPIC --output=rel.$TOPIC.Judged.doc.list --record=$TOPIC.record.list
                # rm -rf rel.$TOPIC.Judged.doc.list
                # touch rel.$TOPIC.Judged.doc.list
                # while IFS='' read -r line || [[ -n $line ]]; do
@@ -191,7 +198,6 @@ for CORP in "${CORPLIST[@]}"
                L=$((L+(L+9)/10))
             fi
             done
-         done
          # cp judge.effort.$TOPIC."$PURPOSE".dump ../result/dump/"$PURPOSE"/"$CORP"/judge.effort.$TOPIC."$PURPOSE".dump
 
          rm -rf svm.test.*
@@ -208,6 +214,7 @@ for CORP in "${CORPLIST[@]}"
       rm N
 
       #Generate LSI from tfdf
-      #python clustering/doLSI.py --input=tfdf_oldreut --output=LSIVector/"$CORP".lsi.dump --mapping=LSIVector/"$CORP".mapping.dump --latent=200 --choice=entropy --normalization=yes
+      #python clustering/doLSI.py --input=tfdf_oldreut --output=LSIVector/"$CORP".lsi.dump\
+      #    --mapping=LSIVector/"$CORP".mapping.dump --latent=200 --choice=entropy --normalization=yes
 
    done
