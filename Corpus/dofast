@@ -2,11 +2,20 @@
 
 export LANG=C
 CORP=$1
+
+if [[ "$MODE" == "4gram" ]]; then
+    TARPROG=./tar4
+else
+    TARPROG=./tar
+fi
+
 #
 #N=`find $1 -type f | wc -l`
 #find $1 -type f -exec ~/featurekit/dosteminline {} \; | sort -k3 | tee concordance.$1 | sed -e 's/.* //' | uniq -c > vocab.$1
 
-zcat $CORP.tgz | ./tar /dev/stdin | sort -k3 > $CORP.concordance 2> dofast.stderr
+zcat $CORP.tgz \
+    | "$TARPROG" /dev/stdin \
+    | sort -k3 > $CORP.concordance 2> dofast.stderr
 #find $1 -name '*.vocab' -exec grep -H . {} \; 2> /dev/null  | sort -k3 > concordance.$1
 #find $1 -name '*vocab' -exec cat {} \; 2> /dev/null | sed -e 's/.* //' | sort | uniq -c > vocab.$1
 

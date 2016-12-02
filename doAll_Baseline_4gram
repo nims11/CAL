@@ -19,7 +19,7 @@ for CORP in "${CORPLIST[@]}"
       pushd Corpus
       
       # if [ ! -e "$CORP".svm.fil ] || [ ! -e "$CORP".df ]; then
-         ./dofast4 "$CORP"
+         MODE=4gram ./dofast "$CORP"
       # fi
       
       cp "$CORP".df ../"$CORP".df
