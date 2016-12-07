@@ -1,5 +1,5 @@
 all:
-	gcc -Wall -O2 -o indexer kissdb/kissdb.c kissdb/indexer.c
+	gcc -Wall -O2 -o kisssdb/kisssdb kisssdb/kisssdb.c
 
 clean:
-	rm -f indexer
+	rm -f kisssdb/kisssdb
