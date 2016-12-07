@@ -10,11 +10,11 @@
 
 
 PURPOSE=baseline
-JUDGECLASS="trec6"
+JUDGECLASS="aquaint"
 
 #CORPLIST=("robust04_0" "robust04_1" "robust04_2" "robust04_3" "robust04_4" "robust04_5")
 #CORPLIST=("FBIS" "FT" "FR" "LA")
-CORPLIST=("trec6")
+CORPLIST=("aquaint")
 SOFIA="/home/nghelani/cal-fusion/sofia-ml/sofia-ml"
 NUMSYS=2
 export LC_ALL=C
@@ -180,8 +180,8 @@ do
                         awk \
                             'NR==FNR{a[$1]=$2}\
                             NR!=FNR{if($1 in a)\
-                            printf("%s judge=%s class=Ham score=%s\n", $1, "spam", $2);}'\
-                            "$TOPIC".record.list inlr.out > fusion_training
+                            printf("%s judge=%s class=Ham score=%s\n", $1, a[$1]==0?"ham":"spam", $2);}'\
+                            ../1/"$TOPIC".record.list inlr.out > fusion_training
                         if [[ $(wc -l < "$TOPIC".record.list) > 0 ]]; then
                             awk \
                                 'NR==FNR{a[$1]=$2}\
