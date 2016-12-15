@@ -4,17 +4,11 @@ export LANG=C
 TOPIC=$2
 CORP=$3
 
-if [[ "$MODE" == "4gram" ]]; then
-    STEMINLINE_PROG=./dosteminline4
-else
-    STEMINLINE_PROG=./dosteminline
-fi
-
 # $1 -> tr0.seed.doc: acquisition
 # concordance.tr0.seed.doc: tr0.seed.doc      1 acquisit
 N=`find $1 -type f | wc -l`
 
-find $1 -type f -exec "$STEMINLINE_PROG" {} \; | sort -k3 > $TOPIC/concordance.$1
+MODE=$MODE find $1 -type f -exec "$STEMINLINE_PROG" {} \; | sort -k3 > $TOPIC/concordance.$1
 
 #tfdf.tr0.seed.doc.sort: acquisit 146 1003 tr0.seed.doc 1
 cat -n $CORP.df | join -13 -23 - $TOPIC/concordance.$1 | sort -k4,4 -k2,2n > $TOPIC/tfdf.$1.sort
@@ -24,4 +18,3 @@ echo N $N
 
 #svm.tr0.seed.doc.fil: tr0.seed.doc 146:1.00000000
 ./dotfidfinline $N < $TOPIC/tfdf.$1.sort > $TOPIC/svm.$1.fil
-
