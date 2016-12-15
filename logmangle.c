@@ -23,6 +23,7 @@ int main(int argc, char **argv){
       }
       w[i] = 1.0/(argc-1);
    }
+   int x = 0;
    while (4 == fscanf(f[1],"%s judge=%s class=%s score=%lf%*[^\n]",file,judge,cl[1],&sc[1])){
       isspam = !strcasecmp(judge,"spam");
       for (i=2;i<argc;i++) {
@@ -32,11 +33,19 @@ int main(int argc, char **argv){
          if (strcmp(judge,njudge)) printf("whoops %s %s %s %s\n",file,judge,nfile,njudge);
          assert(!strcasecmp(judge,njudge));
       }
+
       score = 0;
       for (i=1;i<argc;i++) score += w[i] * sc[i];
       prob = 1/(1+exp(-score));
       printf("%s judge=%s class=%s score=%0.5lf %0.5lf\n",file,judge,score>0?"spam":"ham",score,prob);
-      if (strcmp(judge,"Spam") && strcmp(judge,"Ham")) for (i=1;i<argc;i++) w[i] += (isspam-prob) * delta * sc[i];
+      if (strcmp(judge,"Spam") && strcmp(judge,"Ham")){
+          for (i=1;i<argc;i++){
+              w[i] += (isspam-prob) * delta * sc[i];
+          }
+      }else if(!x){
+          x = 1;
+          /* fprintf(stderr, "%0.5lf %0.5lf\n", w[1], w[2]); */
+      }
       //for (i=1;i<argc;i++) printf("%0.5lf ",w[i]);  printf("\n");
    }
    return 0;
