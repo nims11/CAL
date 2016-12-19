@@ -31,7 +31,7 @@ judgement/qrels.<JUDGECLASS>.list       - Relevance judgements for topics (each 
 1. Comment out the `./dofast` line if you already completed fine the last time
 2. If using qrels for assessment, consider quitting the iterations when you have found the desired number of relevant documents (See the sample snippet)
 ```bash
-    NUM_REL=$(cat */rel.$TOPIC.fil | sort | uniq | wc -l)
+    NUM_REL=$(cat rel.$TOPIC.fil | sort | uniq | wc -l)
     TOT_REL=$(grep "^$TOPIC.*[1-9]$" ../judgement/qrels.$JUDGECLASS.list | cut -d' ' -f3 | sort | uniq | wc -l)
     if [ $NUM_REL -eq $TOT_REL ]; then
         break

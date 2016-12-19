@@ -1,7 +1,7 @@
 #!/bin/bash
 if [[ "$MODE" == "4gram" ]]; then
     X=`pwd`/$1
-    F=`pwd`/Corpus/dofast4
+    F=`pwd`/Corpus/dofast
     mkdir -p ./tmp/xxx$$
     rm -rf ./tmp/dotf*line
     ln -s `pwd`/Corpus/tar4 ./tmp/xxx$$
