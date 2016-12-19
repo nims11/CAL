@@ -25,6 +25,7 @@ judgement/qrels.<JUDGECLASS>.list       - Relevance judgements for topics (each 
 4. The output of BMI are stored in `result/` folder. 
 5. The gain curve can be plotted by analyzing `result/baseline/<corp>/<topic>/<topic>.record.list`
 6. Change number of threads in `doAll_Baseline` by changing the variable `MAXTHREADS` (default=4)
+7. Plot gain curves with `gainCurve.py` (see `python2 gainCurve.py -h`)
 
 ## Speedup Tips
 
