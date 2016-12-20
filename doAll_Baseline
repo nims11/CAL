@@ -10,13 +10,13 @@
 
 
 PURPOSE=baseline
-JUDGECLASS="oldreut"
+JUDGECLASS=${CORP:-oldreut}
 
 #CORPLIST=("robust04_0" "robust04_1" "robust04_2" "robust04_3" "robust04_4" "robust04_5")
 #CORPLIST=("FBIS" "FT" "FR" "LA")
-CORPLIST=("oldreut")
-SOFIA="/home/h435zhan/Develop/sofia-ml-read-only/src/sofia-ml"
-MAXTHREADS=4
+CORPLIST=($JUDGECLASS)
+SOFIA=${SOFIA:-/home/h435zhan/Develop/sofia-ml-read-only/src/sofia-ml}
+MAXTHREADS=${MAXTHREADS:-4}
 export LC_ALL=C
 KISSSDB=$(dirname $(readlink -f $0))/kisssdb/kisssdb
 
