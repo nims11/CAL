@@ -23,6 +23,7 @@ zcat $CORP.tgz \
 mv df $CORP.df
 cat -n $CORP.df | join -13 -23 - $CORP.concordance | sort -k4,4 -k2,2n > $CORP.tfdf
 
+tar -tzf "$CORP".tgz | grep -v '/$' | wc -l > N
 N=`cat N`
 echo N $N
 ../dotfidfinline $N < $CORP.tfdf > $CORP.svm.fil
