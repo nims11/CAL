@@ -54,11 +54,10 @@ def main():
                 for feature in features:
                     feature_id, score = feature.split(':')
                     score = float(score)
-                    weight_sum += score
                     word = dictionary[feature_id]
                     if word in w2v_dict:
-                        # pdb.set_trace()
                         new_features += w2v_dict[word] * score
+                        weight_sum += score
                 new_features /= weight_sum
                 out_f.write('%s %s\n'
                             % (

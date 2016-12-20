@@ -31,14 +31,18 @@ for CORP in "${CORPLIST[@]}"
       pushd Corpus
       
       # if [ ! -e "$CORP".svm.fil ] || [ ! -e "$CORP".df ]; then
-         ./dofast "$CORP"
+         # ./dofast "$CORP"
       # fi
       
       cp "$CORP".df ../"$CORP".df
       sort -k1,1 "$CORP".svm.fil > "$CORP".svm.fil.sorted; mv "$CORP".svm.fil.sorted "$CORP".svm.fil
       cp "$CORP".svm.fil ../"$CORP".svm.fil
+      awk '{a[$2]=$1}END{for(k in a)print k, a[k];}' "$CORP".tfdf > ../"$CORP".dict
       
       popd
+
+      python2 doc2vec.py "$CORP".svm.fil "$CORP".english_analyzer.300.bin "$CORP".dict x
+      mv x "$CORP".svm.fil
 
       echo "Indexing $CORP.svm.fil, keysize = $KEYSIZE, valsize = $VALSIZE"
       awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
@@ -218,6 +222,7 @@ for CORP in "${CORPLIST[@]}"
       rm -rf "$CORP".svm.fil
       rm "$CORP".df
       rm "$CORP".db
+      rm "$CORP".dict
 
       rm N
 
