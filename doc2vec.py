@@ -50,7 +50,7 @@ def main():
                 doc_id = features[0]
                 features = features[1:]
                 weight_sum = 0.0
-                new_features = np.array([0]*200, dtype='float32')
+                new_features = np.array([0]*300, dtype='float32')
                 for feature in features:
                     feature_id, score = feature.split(':')
                     score = float(score)
