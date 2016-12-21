@@ -3,13 +3,14 @@ Converts document tf idf vectors to doc2vec using w2v embeddings
 """
 import sys
 import numpy as np
+import os
 from tqdm import tqdm
+from multiprocessing import Pool
 
 def load_bin_vec(fname):
     """
     Loads 300x1 word vecs from Google (Mikolov) word2vec
     """
-    # w2vDict = {}
     word_vecs = {}
     lineCnt = 0
     with open(fname, "rb") as f:
@@ -29,7 +30,6 @@ def load_bin_vec(fname):
             word_vecs[word] = np.fromstring(f.read(binary_len), dtype='float32')
     return word_vecs
 
-import pdb
 def main():
     svm_fil_fname = sys.argv[1]
     w2v_fname = sys.argv[2]
@@ -46,6 +46,7 @@ def main():
     with open(out_fname, 'w') as out_f:
         with open(svm_fil_fname) as f:
             for doc_line in tqdm(f):
+                pool = Pool(int(os.environ.get('MAXTHREADS', 4)))
                 features = doc_line.strip().split()
                 doc_id = features[0]
                 features = features[1:]
@@ -62,7 +63,7 @@ def main():
                 out_f.write('%s %s\n'
                             % (
                                 doc_id, 
-                                ' '.join(('%d:%f' % (idx,
+                                ' '.join(('%d:%f' % (idx+1,
                                           score) for (idx, score) 
                                           in enumerate(new_features)))
                             )
