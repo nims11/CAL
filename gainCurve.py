@@ -1,3 +1,4 @@
+import sys
 import os
 import argparse
 import colorsys
@@ -21,13 +22,26 @@ def get_random_color(i, n):
     r,g,b = colorsys.hls_to_rgb(hue, light, sat)
     return '#%02x%02x%02x' % (int(r*255), int(g*255), int(b*255))
 
+def label(string):
+    return string.split(',')
+
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(description='Plot gain curves from CAL record list')
     PARSER.add_argument('files', help='Path of record list(<topic>.record.list) file', nargs='+')
     PARSER.add_argument('--log-scale', help='Plot effort in log scale', default=False, action='store_true')
+    PARSER.add_argument('--labels', help='legend labels (comma separated, one for each curve)', default=None, type=label)
     CLI = PARSER.parse_args()
+
+    if CLI.labels is not None and len(CLI.labels) != len(CLI.files):
+        sys.stderr.write('Error: Number of labels much match the number of files!')
+        sys.exit(1)
+
     for idx, fname in enumerate(CLI.files):
-        plot(fname, get_random_color(idx, len(CLI.files)), "file-%d" % idx)
+        plot(
+            fname, 
+            get_random_color(idx, len(CLI.files)),
+            "file-%d" % idx if CLI.labels is None else CLI.labels[idx]
+        )
     plt.xlabel("effort")
     plt.ylabel("documents")
     if CLI.log_scale:
