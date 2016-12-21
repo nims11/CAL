@@ -4,7 +4,7 @@ import argparse
 import colorsys
 import matplotlib.pyplot as plt
 
-def plot(fname, color, label):
+def plot(fname, color, label, truncate_x=None):
     x_vals = [0]
     y_vals = [0]
     with open(fname) as f:
@@ -13,6 +13,8 @@ def plot(fname, color, label):
             score = int(score)
             y_vals.append(y_vals[-1] + score)
             x_vals.append(x_vals[-1] + 1)
+    x_vals = x_vals[:truncate_x]
+    y_vals = y_vals[:truncate_x]
     plt.plot(x_vals, y_vals, color=color, label=label)
 
 def get_random_color(i, n):
@@ -30,6 +32,7 @@ if __name__ == '__main__':
     PARSER.add_argument('files', help='Path of record list(<topic>.record.list) file', nargs='+')
     PARSER.add_argument('--log-scale', help='Plot effort in log scale', default=False, action='store_true')
     PARSER.add_argument('--labels', help='legend labels (comma separated, one for each curve)', default=None, type=label)
+    PARSER.add_argument('--title', help='curve title', default=None, type=str)
     CLI = PARSER.parse_args()
 
     if CLI.labels is not None and len(CLI.labels) != len(CLI.files):
@@ -44,6 +47,9 @@ if __name__ == '__main__':
         )
     plt.xlabel("effort")
     plt.ylabel("documents")
+    if CLI.title is not None:
+        plt.suptitle(CLI.title, fontsize=14, fontweight='bold')
+
     if CLI.log_scale:
         plt.xscale('log')
     ax = plt.subplot(111)
