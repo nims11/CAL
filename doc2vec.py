@@ -30,6 +30,42 @@ def load_bin_vec(fname):
             word_vecs[word] = np.fromstring(f.read(binary_len), dtype='float32')
     return word_vecs
 
+def main2():
+    tf_fname = sys.argv[1]
+    w2v_fname = sys.argv[2]
+    out_fname = sys.argv[3]
+    w2v_dict = load_bin_vec(w2v_fname)
+
+    cnt = set()
+    with open(out_fname, 'w') as out_f:
+        def write_stuff(new_features, weight_sum, cur_doc_name):
+            new_features /= weight_sum
+            out_f.write('%s %s\n'
+                        % (
+                            cur_doc_name, 
+                            ' '.join(('%d:%f' % (idx+1,
+                                      score) for (idx, score) 
+                                      in enumerate(new_features)))
+                        )
+                        )
+        with open(tf_fname) as f:
+            new_features = np.array([0]*300, dtype='float32')
+            cur_doc_name = None
+            weight_sum = 0.0
+            for doc_line in tqdm(f):
+                word, _id, _, doc_id, tf = doc_line.split()
+                tf = int(tf)
+                if doc_id != cur_doc_name:
+                    if cur_doc_name is not None:
+                        write_stuff(new_features, weight_sum, cur_doc_name)
+                    cur_doc_name = doc_id
+                    weight_sum = 0.0
+                    new_features = np.array([0]*300, dtype='float32')
+
+                if word in w2v_dict:
+                    new_features += w2v_dict[word] * tf
+                    weight_sum += tf
+            write_stuff(new_features, weight_sum, cur_doc_name)
 def main():
     svm_fil_fname = sys.argv[1]
     w2v_fname = sys.argv[2]
@@ -71,4 +107,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main2()

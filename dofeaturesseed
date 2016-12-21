@@ -18,5 +18,6 @@ echo N $N
 
 #svm.tr0.seed.doc.fil: tr0.seed.doc 146:1.00000000
 ./dotfidfinline $N < $TOPIC/tfdf.$1.sort > $TOPIC/svm.$1.fil
-python2 doc2vec.py "$TOPIC"/svm.$1.fil "$CORP".english_analyzer.300.bin "$CORP".dict x
+# python2 doc2vec.py "$TOPIC"/svm.$1.fil "$CORP".english_analyzer.300.bin "$CORP".dict x
+python2 doc2vec.py $TOPIC/tfdf.$1.sort "$CORP".english_analyzer.300.bin x
 mv x "$TOPIC"/svm.$1.fil
