@@ -44,7 +44,7 @@ int main(int argc, char **argv){
           }
       }else if(!x){
           x = 1;
-          /* fprintf(stderr, "%0.5lf %0.5lf\n", w[1], w[2]); */
+          fprintf(stderr, "%0.5lf %0.5lf\n", w[1], w[2]);
       }
       //for (i=1;i<argc;i++) printf("%0.5lf ",w[i]);  printf("\n");
    }

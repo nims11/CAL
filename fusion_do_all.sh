@@ -53,6 +53,10 @@ do
         exit 1
     fi
 
+    echo "Counting dimensions..."
+    DIMENSIONALITY=$(awk 'BEGIN{a=0;RS=":"}{if(a<$NF){a=$NF}}END{a+=1;print a}' "$CORP".svm.fil)
+    echo "Dimensions = $DIMENSIONALITY"
+
     while IFS='' read -r line || [[ -n $line ]]; do
         IFS=':' read -ra TEXT <<< "$line"
 
@@ -97,6 +101,7 @@ do
             rm -rf rel.rate
             touch rel.rate
             touch $TOPIC.record.list
+            touch $TOPIC.record.list.batch
             popd
         done
 
@@ -155,14 +160,14 @@ do
 
                         $SOFIA --learner_type logreg-pegasos --loop_type roc --lambda $LAMBDA\
                             --iterations 200000 --training_file trainset\
-                            --dimensionality 3300000 --model_out svm_model
+                            --dimensionality $DIMENSIONALITY --model_out svm_model
                         RES=$?
                         echo $RES
                         X=1
                         echo "TEST!"
                         if [ "$RES" -eq "0" ] ; then
                             for z in ../svm.test.* ; do
-                                $SOFIA --test_file $z --dimensionality 3300000\
+                                $SOFIA --test_file $z --dimensionality $DIMENSIONALITY\
                                     --model_in svm_model --results_file pout."$(basename $z)" &
                             done
                             if [ $((X%10)) -eq 0 ]; then
@@ -180,19 +185,19 @@ do
                         awk \
                             'NR==FNR{a[$1]=$2}\
                             NR!=FNR{if($1 in a)\
-                            printf("%s judge=%s class=Ham score=%s\n", $1, a[$1]==0?"ham":"spam", $2);}'\
-                            ../1/"$TOPIC".record.list inlr.out > fusion_training
+                            printf("%s %s %s %s\n", $2, a[$1]==0?"ham":"spam", $1, $3);}'\
+                            ../1/"$TOPIC".record.list.batch inlr.out > fusion_training
                         if [[ $(wc -l < "$TOPIC".record.list) > 0 ]]; then
                             awk \
                                 'NR==FNR{a[$1]=$2}\
                                 NR!=FNR{if($1 in a){}else\
-                                printf("%s judge=%s class=Ham score=%s\n", $1, "Ham", $2);}'\
+                                printf("%s %s -1 %s\n", $1, "Ham", $2);}'\
                                 "$TOPIC".record.list inlr.out >> fusion_training
                         else
                             awk \
                                 '{\
-                                printf("%s judge=%s class=Ham score=%s\n", $1, "Ham", $2);}'\
-                                 inlr.out >> fusion_training
+                                printf("%s %s -1 %s\n", $1, "Ham", $2);}'\
+                                inlr.out >> fusion_training
                         fi
                         wait
                         ) &
@@ -227,8 +232,10 @@ do
                             if [ $RELFLAG -ge $SYS ] ; then
                                 echo $line 1 >> rel.$TOPIC.Judged.doc.list
                                 echo $line 1 >> $TOPIC.record.list
+                                echo $N $line 1 >> $TOPIC.record.list.batch
                             else
                                 echo $line 0 >> $TOPIC.record.list
+                                echo $N $line 0 >> $TOPIC.record.list.batch
                             fi
                         done < new$N.$TOPIC
                         cat rel.$TOPIC.Judged.doc.list >> rel.$TOPIC.fil
