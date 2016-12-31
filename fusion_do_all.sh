@@ -125,7 +125,7 @@ do
         sed -e 's/[^ ]*/1/' svm.$TOPIC.seed.doc.fil > $TOPIC.synthetic.seed
 
 
-        for x in {0..5} ; do
+        for x in {0..4} ; do
             for y in {0..9} ; do
                 if [ $NDUN -lt $NDOCS ] ; then
                     export N=$x$y
@@ -206,8 +206,12 @@ do
                     wait
 
                     # python3 ../fusion.py 1/new$N.$TOPIC 2/new$N.$TOPIC > new$N.$TOPIC
-                    ../logmangle [1-9]/fusion_training | tr '=' ' ' | cut -d' ' -f1,7 | sort -k1 > fused_ranklist
-                    sort 1/seed | join -v2 - fused_ranklist | sort -rn -k2 > x
+                    # ../logmangle [1-9]/fusion_training | tr '=' ' ' | cut -d' ' -f1,7 | sort -k1 > fused_ranklist
+                    python2 ../among_score_fusion.py [1-9]/fusion_training  > fused_ranklist
+                    awk \
+                        'NR==FNR{a[$1]=1}NR!=FNR{if(!a[$1])print $0}' \
+                        1/seed fused_ranklist | sort -rn -k2 > x
+                    # sort 1/seed | join -v2 - fused_ranklist | sort -rn -k2 > x
                     mv x fused_ranklist
 
                     # cat new[0-9][0-9].$TOPIC > x
