@@ -159,7 +159,10 @@ for CORP in "${CORPLIST[@]}"
                   cut -f2 docfils | sort -R | cat -n | sort -k2 | sed -e 's/ */-/' > pout.svm.test.1
                fi
                cut -f1 pout.svm.test.* | ../fixnum | cat -n | join -o2.2,1.2 -t$'\t' - docfils > inlr.out
-               sort seed | join -v2 - inlr.out | sort -rn -k2 | cut -d' ' -f1 > new$N.$TOPIC
+               awk \
+                   'NR==FNR{a[$1]=1}NR!=FNR{if(!a[$1])print $0}' \
+                   seed inlr.out | sort -rn -k2 | cut -d' ' -f1 > new$N.$TOPIC
+               # sort seed | join -v2 - inlr.out | sort -rn -k2 | cut -d' ' -f1 > new$N.$TOPIC
                cat new[0-9][0-9].$TOPIC > x
                if [ "$N" != "99" ] ; then
                   head -$L new$N.$TOPIC > y ; mv y new$N.$TOPIC
