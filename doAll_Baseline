@@ -9,15 +9,14 @@
 # rm -rf corpdata
 
 
+export LC_ALL=C
+export LANG=C
+
 PURPOSE=baseline
 JUDGECLASS=${CORP:-oldreut}
-
-#CORPLIST=("robust04_0" "robust04_1" "robust04_2" "robust04_3" "robust04_4" "robust04_5")
-#CORPLIST=("FBIS" "FT" "FR" "LA")
 CORPLIST=($JUDGECLASS)
-SOFIA=${SOFIA:-/home/h435zhan/Develop/sofia-ml-read-only/src/sofia-ml}
+SOFIA=${SOFIA:-$(dirname $(readlink -f $0))/sofia-ml/src/sofia-ml}
 MAXTHREADS=${MAXTHREADS:-4}
-export LC_ALL=C
 KISSSDB=$(dirname $(readlink -f $0))/kisssdb/kisssdb
 
 if [ ! -e "$KISSSDB" ]; then
@@ -25,29 +24,52 @@ if [ ! -e "$KISSSDB" ]; then
     exit 1
 fi
 
+if [ ! -e "$SOFIA" ]; then
+    echo "sofia binary not found at $SOFIA!"
+    exit 1
+fi
+
+trap "exit 1" ERROR
+export PPID=$$
+
+function process_corpus(){
+    pushd Corpus
+    CORP=$1
+    echo "Processing Corpus $CORP"
+    if [[ "$MODE" == "4gram" ]]; then
+        TARPROG=./tar4
+    else
+        TARPROG=./tar
+    fi
+
+    zcat $CORP.tgz \
+        | "$TARPROG" /dev/stdin \
+        | sort -k3 > "$CORP.concordance" 2> dofast.stderr
+
+    mv df "$CORP.df"
+    cat -n "$CORP.df" | join -13 -23 - "$CORP.concordance" | sort -k4,4 -k2,2n > "$CORP.tfdf"
+
+    tar -tzf "$CORP".tgz | grep -v '/$' | wc -l > "$CORP".N
+    N=`cat "$CORP.N"`
+    echo "Number of documents: $N"
+    ../dotfidfinline $N < "$CORP.tfdf" > "$CORP.svm.fil"
+    sort -k1,1 "$CORP".svm.fil > "$CORP".svm.fil.sorted; mv "$CORP".svm.fil.sorted "$CORP".svm.fil
+
+    echo "Indexing $CORP.svm.fil, keysize = $KEYSIZE, valsize = $VALSIZE"
+    awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
+    if [ $? -eq 0 ]; then
+        echo "DB Population complete..."
+    else
+        echo "Error Creating DB"
+        kill -s ERROR $PPID
+    fi
+    popd
+}
+
 for CORP in "${CORPLIST[@]}"
    do
    
-      pushd Corpus
-      
-      # if [ ! -e "$CORP".svm.fil ] || [ ! -e "$CORP".df ]; then
-         ./dofast "$CORP"
-      # fi
-      
-      cp "$CORP".df ../"$CORP".df
-      sort -k1,1 "$CORP".svm.fil > "$CORP".svm.fil.sorted; mv "$CORP".svm.fil.sorted "$CORP".svm.fil
-      cp "$CORP".svm.fil ../"$CORP".svm.fil
-      
-      popd
-
-      echo "Indexing $CORP.svm.fil, keysize = $KEYSIZE, valsize = $VALSIZE"
-      awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
-      if [ $? -eq 0 ]; then
-          echo "DB Population complete..."
-      else
-          echo "Error Creating DB"
-          exit 1
-      fi
+      process_corpus "$CORP"
 
       echo "Counting dimensions..."
       DIMENSIONALITY=$(awk 'BEGIN{a=0;RS=":"}{if(a<$NF){a=$NF}}END{a+=1;print a}' "$CORP".svm.fil)
