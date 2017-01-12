@@ -55,7 +55,7 @@ function process_corpus(){
     ../dotfidfinline $N < "$CORP.tfdf" > "$CORP.svm.fil"
     sort -k1,1 "$CORP".svm.fil > "$CORP".svm.fil.sorted; mv "$CORP".svm.fil.sorted "$CORP".svm.fil
 
-    echo "Indexing $CORP.svm.fil, keysize = $KEYSIZE, valsize = $VALSIZE"
+    echo "Indexing $CORP.svm.fil"
     awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
     if [ $? -eq 0 ]; then
         echo "DB Population complete..."
