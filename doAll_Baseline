@@ -101,8 +101,6 @@ for CORP in "${CORPLIST[@]}"
 
          touch rel.$TOPIC.fil
          
-         #cut -f2 docfil | join - $TOPIC.seed.sorted | cut -d' ' -f2 >> rel.$TOPIC.fil
-
          touch prel.$TOPIC
          rm -rf prevalence.rate
          touch prevalence.rate
@@ -132,18 +130,12 @@ for CORP in "${CORPLIST[@]}"
         for N in $(seq -f "%02g" 0 99); do
             if [ $NDUN -lt $NDOCS ] ; then
                cp $TOPIC.synthetic.seed trainset
-               #cut -f2 docfils | join -v1 - rel.$TOPIC.fil > $TOPIC.allNoRel.docfils
-               #cut -f1 $TOPIC.allNoRel.docfils | sort -R | head -$R | sort | join - ../svm.fil\
-               #    | sed -e's/[^ ]*/-1/' >> trainset
                cut -f2 docfils | shuf -n$R | sort |\
                    "$KISSSDB" ../$CORP.db | sed -e's/[^ ]*/-1/' > trainset1 &
 
                (
                cat new[0-9][0-9].$TOPIC > seed
-               #cut -f2 docfil | join - $TOPIC.clusteringJudged.doc.sorted | cut -d' ' -f2 >> seed
                cat seed | sort | join - rel.$TOPIC.fil | sed -e 's/^/1 /' > x
-               #cat seed | sort | join -v1 - rel.$TOPIC.fil | join -v1 - $TOPIC.clusteringNotRel.doc.sorted |\
-               #    sort -R | head -50000 | sed -e 's/^/-1 /' >> x
                cat seed | sort | join -v1 - rel.$TOPIC.fil | shuf -n 50000 | sed -e 's/^/-1 /' >> x
                cut -d' ' -f2 x | "$KISSSDB" ../$CORP.db | cut -d' ' -f2- |\
                    paste -d' ' <(cut -d' ' -f1 x) - | sort -n > trainset2
@@ -163,7 +155,6 @@ for CORP in "${CORPLIST[@]}"
 
                "$SOFIA" --learner_type logreg-pegasos --loop_type roc --lambda $LAMBDA\
                    --iterations 200000 --training_file trainset --dimensionality $DIMENSIONALITY --model_out svm_model
-               #/home/user/svmlight/svm_learn trainset
 
                RES=$?
                echo $RES
@@ -190,12 +181,6 @@ for CORP in "${CORPLIST[@]}"
                   head -$L new$N.$TOPIC > y ; mv y new$N.$TOPIC
                fi
 
-               # sed -e 's/.*\///' -e 's/.*/"&"/' new$N.$TOPIC | tr '\n' ',' | sed -e 's/^/[/' -e 's/,$/]/'\
-               #    | curl -XPOST -H 'Content-Type:application/json' "$TRSERVER/judge/$LOGIN/$TOPIC" -d @- \
-               #    | tr '}' '\n' | grep 'judgement.:1' | cut -d'"' -f4 | sort | join -o2.2 - docfil >> rel.$TOPIC.fil
-               # python ../doJudgementMain.py --topic=$TOPIC --judgefile=../judgement/qrels.$JUDGECLASS.list\
-               #    --input=new$N.$TOPIC --output=rel.$TOPIC.Judged.doc.list\
-               #    --memorydumpfile=judge.effort.$TOPIC."$PURPOSE".dump
                python ../doJudgementMain.py --topic=$TOPIC --judgefile=../judgement/qrels.$JUDGECLASS.list\
                    --input=new$N.$TOPIC --output=rel.$TOPIC.Judged.doc.list --record=$TOPIC.record.list
                # rm -rf rel.$TOPIC.Judged.doc.list
@@ -245,9 +230,5 @@ for CORP in "${CORPLIST[@]}"
       rm "$CORP".db
 
       rm N
-
-      #Generate LSI from tfdf
-      #python clustering/doLSI.py --input=tfdf_oldreut --output=LSIVector/"$CORP".lsi.dump\
-      #    --mapping=LSIVector/"$CORP".mapping.dump --latent=200 --choice=entropy --normalization=yes
 
    done
