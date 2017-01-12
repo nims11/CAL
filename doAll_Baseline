@@ -54,6 +54,7 @@ function process_corpus(){
     N=`cat "$CORP.N"`
     echo "Number of documents: $N"
     ../dotfidfinline $N < "$CORP.tfdf" > "$CORP.svm.fil"
+    sort -k1,1 "$CORP".svm.fil > "$CORP".svm.fil.sorted; mv "$CORP".svm.fil.sorted "$CORP".svm.fil
 
     echo "Indexing $CORP.svm.fil"
     awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
@@ -78,8 +79,7 @@ for CORP in "${CORPLIST[@]}"; do
 
         TOPIC="${TEXT[0]}"
         QUERY="${TEXT[1]}"
-        echo "$TOPIC"
-        echo "$QUERY"
+        echo "$TOPIC: $QUERY"
 
         rm -rf result/"$PURPOSE"/"$CORP"/"$TOPIC"/
         mkdir -p result/"$PURPOSE"/"$CORP"/
@@ -88,14 +88,12 @@ for CORP in "${CORPLIST[@]}"; do
         rm -rf $TOPIC
         mkdir $TOPIC
 
-
-        echo `wc -l < "$CORP".svm.fil` > N
         pushd $TOPIC 
 
         echo "$QUERY" > "$TOPIC".seed.doc
 
-        cut -d' ' -f1 ../$CORP.svm.fil | sed -e 's/.*/& &/' > docfil
-        cut -d' ' -f1 docfil | cat -n > docfils
+        cut -d' ' -f1 ../Corpus/"$CORP.svm.fil" | sed -e 's/.*/& &/' \
+        | cut -d' ' -f1 | cat -n > docfils
 
         touch rel.$TOPIC.fil
 
@@ -121,7 +119,7 @@ for CORP in "${CORPLIST[@]}"; do
 
         ./dofeaturesseed $TOPIC.seed.doc $TOPIC $CORP
         pushd $TOPIC
-        sed -e 's/[^ ]*/0/' ../$CORP.svm.fil | ../dosplit
+        sed -e 's/[^ ]*/0/' ../Corpus/$CORP.svm.fil | ../dosplit
         sed -e 's/[^ ]*/1/' svm.$TOPIC.seed.doc.fil > $TOPIC.synthetic.seed
 
 
@@ -214,7 +212,6 @@ for CORP in "${CORPLIST[@]}"; do
                 # fi
             fi
         done
-        # cp judge.effort.$TOPIC."$PURPOSE".dump ../result/dump/"$PURPOSE"/"$CORP"/judge.effort.$TOPIC."$PURPOSE".dump
 
         rm -rf svm.test.*
         popd
@@ -223,9 +220,9 @@ for CORP in "${CORPLIST[@]}"; do
         rm $TOPIC.seed.doc
 
     done < "judgement/$CORP.topic.stemming.txt"
-    rm -rf "$CORP".svm.fil
-    rm "$CORP".df
-    rm "$CORP".db
+    # rm -rf "$CORP".svm.fil
+    # rm "$CORP".df
+    # rm "$CORP".db
 
     rm N
 
