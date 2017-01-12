@@ -29,11 +29,11 @@ if [ ! -e "$SOFIA" ]; then
     exit 1
 fi
 
-trap "exit 1" ERROR
-export PPID=$$
+trap "exit 1" TERM
+export _PPID=$$
 
 function process_corpus(){
-    pushd Corpus
+    pushd Corpus > /dev/null
     CORP=$1
     echo "Processing Corpus $CORP"
     if [[ "$MODE" == "4gram" ]]; then
@@ -44,6 +44,7 @@ function process_corpus(){
 
     zcat $CORP.tgz \
         | "$TARPROG" /dev/stdin \
+        2> >(awk '/Found file/{x+=1;printf("%d files read\r", x);} END{print "\ndone"}' > /dev/stderr) \
         | sort -k3 > "$CORP.concordance" 2> dofast.stderr
 
     mv df "$CORP.df"
@@ -56,20 +57,20 @@ function process_corpus(){
 
     echo "Indexing $CORP.svm.fil"
     awk '{print $1;print $0;}' "$CORP.svm.fil" | "$KISSSDB" "$CORP".db 1000081
-    if [ $? -eq 0 ]; then
+    if [ ${PIPESTATUS[0]} -eq 0 ]; then
         echo "DB Population complete..."
     else
         echo "Error Creating DB"
-        kill -s ERROR $PPID
+        kill -s TERM $_PPID
     fi
-    popd
+    popd > /dev/null
 }
 
 for CORP in "${CORPLIST[@]}"; do
     process_corpus "$CORP"
 
     echo "Counting dimensions..."
-    DIMENSIONALITY=$(awk 'BEGIN{a=0;RS=":"}{if(a<$NF){a=$NF}}END{a+=1;print a}' "$CORP".svm.fil)
+    DIMENSIONALITY=$(awk 'BEGIN{a=0;RS=":"}{if(a<$NF){a=$NF}}END{a+=1;print a}' Corpus/"$CORP".svm.fil)
     echo "Dimensions = $DIMENSIONALITY"
 
     while IFS='' read -r line || [[ -n $line ]]; do
