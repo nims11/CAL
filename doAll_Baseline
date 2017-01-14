@@ -68,7 +68,15 @@ function do_feature_seed(){
 }
 
 for CORP in "${CORPLIST[@]}"; do
-    process_corpus "$CORP"
+    if [ ! -e Corpus/"$CORP.svm.fil" ] \
+    || [ ! -e Corpus/"$CORP.tfdf" ] \
+    || [ ! -e Corpus/"$CORP.concordance" ] \
+    || [ ! -e Corpus/"$CORP.N" ] \
+    || [ ! -e Corpus/"$CORP.df" ] \
+    || [ ! -e Corpus/"$CORP.db" ] \
+    || [ ! "$CACHE" -eq "1" ]; then
+        process_corpus "$CORP"
+    fi
 
     echo "Counting dimensions..."
     DIMENSIONALITY=$(awk 'BEGIN{a=0;RS=":"}{if(a<$NF){a=$NF}}END{a+=1;print a}' Corpus/"$CORP".svm.fil)
