@@ -1,3 +1,18 @@
 #!/bin/bash
-
-./porter $1 | sed -e 's/[^a-z0-9]/ /g' -e 's/  */\n/g' | egrep -v '^$|[0-9]' | sort | uniq -c | sed -e "s,^,$1," -e 's/.*\///'
+if [[ "$MODE" == "4gram" ]]; then
+    X=`pwd`/$1
+    F=`pwd`/Corpus/dofast
+    mkdir -p ./tmp/xxx$$
+    rm -rf ./tmp/dotf*line
+    ln -s `pwd`/Corpus/tar4 ./tmp/xxx$$
+    ln -s `pwd`/dotf*line ./tmp
+    cd ./tmp/xxx$$
+    mkdir thing
+    cp $X thing/doc
+    tar zcf thing.tgz thing
+    $F thing
+    cat thing.concordance
+else
+    ./porter $1 | sed -e 's/[^a-z0-9]/ /g' -e 's/  */\n/g' \
+        | egrep -v '^$|[0-9]' | sort | uniq -c | sed -e "s,^,$1," -e 's/.*\///'
+fi
