@@ -208,9 +208,13 @@ do
                     # python3 ../fusion.py 1/new$N.$TOPIC 2/new$N.$TOPIC > new$N.$TOPIC
                     # ../logmangle [1-9]/fusion_training | tr '=' ' ' | cut -d' ' -f1,7 | sort -k1 > fused_ranklist
                     python2 ../among_score_fusion.py [1-9]/fusion_training  > fused_ranklist
-                    awk \
-                        'NR==FNR{a[$1]=1}NR!=FNR{if(!a[$1])print $0}' \
-                        1/seed fused_ranklist | sort -rn -k2 > x
+                    if [[ $(wc -l < 1/seed) > 0 ]]; then
+                        awk \
+                            'NR==FNR{a[$1]=1}NR!=FNR{if(!a[$1])print $0}' \
+                            1/seed fused_ranklist | sort -rn -k2 > x
+                    else
+                        cat fused_ranklist | sort -rn -k2 > x
+                    fi
                     # sort 1/seed | join -v2 - fused_ranklist | sort -rn -k2 > x
                     mv x fused_ranklist
 
