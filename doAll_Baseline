@@ -220,7 +220,7 @@ for CORP in "${CORPLIST[@]}"; do
                 L=$((L+(L+9)/10))
                 # NUM_REL=$(cat rel.$TOPIC.fil | sort | uniq | wc -l)
                 # TOT_REL=$(grep "^$TOPIC.*[1-9]$" ../judgement/qrels.$JUDGECLASS.list \
-                    # | cut -d' ' -f3 | sort | uniq | wc -l)
+                #     | cut -d' ' -f3 | sort | uniq | wc -l)
                 # if [ $NUM_REL -eq $TOT_REL ]; then
                 #     break
                 # fi
